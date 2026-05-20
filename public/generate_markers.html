@@ -372,12 +372,18 @@
     // Generar códigos QR basados en la IP/URL de ejecución actual
     window.addEventListener('DOMContentLoaded', () => {
       const origin = window.location.origin;
-      const pathname = window.location.pathname.replace('public/generate_markers.html', '') + 'index.html';
+      let base = window.location.pathname;
+      if (base.endsWith('generate_markers.html')) {
+        base = base.substring(0, base.lastIndexOf('/'));
+      }
+      if (!base.endsWith('/')) {
+        base += '/';
+      }
       
       const locs = ['ingreso', 'biblioteca', 'laboratorio', 'auditorio'];
       
       locs.forEach(loc => {
-        const fullUrl = `${origin}${pathname}?loc=${loc}`;
+        const fullUrl = `${origin}${base}index.html?loc=${loc}`;
         
         // Colocar texto de la URL
         document.getElementById(`url-${loc}`).innerText = fullUrl;

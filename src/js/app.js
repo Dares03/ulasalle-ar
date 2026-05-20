@@ -161,7 +161,7 @@ async function setupLocation(locId) {
   });
 
   // Pre-cargar/Verificar audio MP3 o configurar TTS
-  const mp3Url = `./public/audio/${locId}.mp3`;
+  const mp3Url = `/audio/${locId}.mp3`;
   try {
     const response = await fetch(mp3Url, { method: 'HEAD' });
     if (response.ok) {
