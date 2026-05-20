@@ -1,0 +1,14 @@
+{
+  "name": "ulasalle-ar",
+  "version": "1.0.0",
+  "description": "AR Tour for Universidad La Salle de Arequipa using AR.js and A-Frame",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

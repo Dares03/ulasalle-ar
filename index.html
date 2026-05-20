@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tour Virtual AR - Universidad La Salle Arequipa</title>
+  <!-- Google Fonts: Outfit & Space Grotesk for a premium sci-fi/academic look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for HUD icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- A-Frame (v1.4.0) -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <!-- AR.js for A-Frame (v3.4.5) -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
+  
+  <!-- Local Styles -->
+  <link rel="stylesheet" href="./src/css/style.css">
+</head>
+<body style="margin: 0; overflow: hidden;">
+
+  <!-- 1. Pantalla de Bienvenida / Portal de Acceso (Permisos) -->
+  <div id="welcome-portal" class="welcome-overlay">
+    <div class="welcome-content">
+      <div class="logo-container">
+        <!-- Icono decorativo futurista / Escudo representación -->
+        <div class="glow-ring"></div>
+        <div class="core-logo">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+      </div>
+      
+      <h1 class="welcome-title">ULASALLE <span class="accent-text">AR TOUR</span></h1>
+      <p class="welcome-subtitle">Universidad La Salle de Arequipa</p>
+      
+      <div class="info-card-welcome">
+        <p><i class="fa-solid fa-camera-retro"></i> Esta experiencia requiere acceso a la cámara para mostrar objetos en 3D.</p>
+        <p><i class="fa-solid fa-volume-high"></i> Se reproducirá una audio-guía narrada al detectar el marcador.</p>
+      </div>
+
+      <button id="btn-enter" class="glow-btn">
+        <span>INICIAR EXPERIENCIA</span>
+        <i class="fa-solid fa-rocket"></i>
+      </button>
+      
+      <div class="welcome-footer">
+        Curso de Realidad Virtual y Aumentada &copy; 2026
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Escena de Realidad Aumentada (A-Frame + AR.js) -->
+  <!-- Ocultamos la escena inicialmente hasta que se presione el botón de entrada -->
+  <a-scene embedded 
+           arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;" 
+           renderer="logarithmicDepthBuffer: true; colorManagement: true;"
+           vr-mode-ui="enabled: false"
+           style="opacity: 0; transition: opacity 1s ease;">
+           
+    <!-- Iluminación para resaltar los materiales metálicos de los hologramas -->
+    <a-entity light="type: ambient; color: #FFF; intensity: 0.8"></a-entity>
+    <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-1 2 1"></a-entity>
+    <a-entity light="type: point; color: #00E5FF; intensity: 0.5" position="0 2 0"></a-entity>
+
+    <!-- Marcador AR.js: Usamos el marcador HIRO por defecto por máxima compatibilidad.
+         Se puede alternar fácilmente a un marcador personalizado con la propiedad type="pattern" -->
+    <a-marker id="ar-marker" preset="hiro">
+      <!-- Los objetos 3D se inyectarán dinámicamente aquí según la URL ?loc=... -->
+    </a-marker>
+
+    <!-- Cámara de la escena AR -->
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <!-- 3. Interfaz de Usuario Overlay (HUD - Heads-Up Display) -->
+  <div id="hud-container" class="hud-overlay" style="display: none;">
+    
+    <!-- Notificación / Estado del Escaneo de Cámara -->
+    <div id="scan-feedback" class="scan-status active">
+      <div class="spinner"></div>
+      <span>Apunta la cámara al marcador (Código QR / Hiro)</span>
+    </div>
+
+    <!-- Panel de Cabecera (Ubicación Actual) -->
+    <header class="hud-header">
+      <div class="univ-tag">
+        <span class="pulse-dot"></span>
+        <span>ULASALLE AQP</span>
+      </div>
+      <div class="header-location">
+        <h2 id="loc-title">Cargando...</h2>
+        <p id="loc-subtitle">Tour Virtual</p>
+      </div>
+    </header>
+
+    <!-- Control de Audio Flotante en Pantalla -->
+    <div class="audio-hud-card">
+      <div class="audio-info">
+        <span class="audio-label">NARRACIÓN DE AUDIO</span>
+        <!-- Onda de Voz Animada (CSS) -->
+        <div id="voice-wave" class="voice-wave-container">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </div>
+      </div>
+      <div class="audio-controls">
+        <button id="btn-audio-play" class="audio-btn" title="Reproducir/Pausar">
+          <i class="fa-solid fa-play"></i>
+        </button>
+        <button id="btn-audio-replay" class="audio-btn secondary" title="Reiniciar">
+          <i class="fa-solid fa-arrow-rotate-left"></i>
+        </button>
+        <div class="audio-progress-container">
+          <div id="audio-progress-bar" class="audio-progress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de Información Inferior (Bottom Sheet Card) -->
+    <section class="hud-bottom-card">
+      <div class="drag-handle" id="bottom-card-handle"></div>
+      
+      <div class="card-scroll-area">
+        <h3 class="section-title">Sobre esta parada</h3>
+        <p id="loc-description" class="loc-description">
+          Cargando la información correspondiente al código escaneado...
+        </p>
+
+        <!-- Información Académica Adicional (Desplegable) -->
+        <div class="details-accordion">
+          <div class="accordion-header" id="accordion-toggle">
+            <span>Datos de Interés Académico</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </div>
+          <div class="accordion-content" id="accordion-content">
+            <ul class="details-list" id="loc-details-list">
+              <!-- Elementos dinámicos en js -->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Botones de Acción Flotantes (Menú de Selección Manual) -->
+    <div class="floating-actions">
+      <button id="btn-map" class="action-fab" title="Ver Mapa de Recorrido">
+        <i class="fa-solid fa-map-location-dot"></i>
+      </button>
+      <button id="btn-menu" class="action-fab main-fab" title="Ver otras paradas">
+        <i class="fa-solid fa-compass"></i>
+      </button>
+    </div>
+
+    <!-- Modal: Selector Manual de Paradas (Back-up por si falla la cámara) -->
+    <div id="menu-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Seleccionar Parada del Tour</h3>
+          <button id="btn-close-modal" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <p>¿No puedes escanear el código físico? Elige una parada manualmente:</p>
+          <div class="location-grid" id="modal-locations-list">
+            <!-- Se generará dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Mapa de la Universidad -->
+    <div id="map-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Mapa del Recorrido AR</h3>
+          <button id="btn-close-map" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body text-center">
+          <p>Ubica los códigos QR en las puertas de las siguientes locaciones de la Universidad La Salle:</p>
+          <div class="map-container">
+            <div class="map-placeholder">
+              <i class="fa-solid fa-map-marked-alt map-bg-icon"></i>
+              <div class="map-route">
+                <div class="map-point active" style="top: 80%; left: 50%;" data-name="Ingreso">1</div>
+                <div class="map-point" style="top: 50%; left: 30%;" data-name="Biblioteca">2</div>
+                <div class="map-point" style="top: 25%; left: 40%;" data-name="Laboratorio">3</div>
+                <div class="map-point" style="top: 35%; left: 70%;" data-name="Auditorio">4</div>
+              </div>
+            </div>
+            <div class="map-legend">
+              <p><strong>Ruta Recomendada:</strong> 1. Ingreso Principal &rarr; 2. Biblioteca &rarr; 3. Laboratorio &rarr; 4. Auditorio</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts del Proyecto -->
+  <!-- Cargamos el módulo de JS -->
+  <script type="module" src="./src/js/app.js"></script>
+</body>
+</html>
