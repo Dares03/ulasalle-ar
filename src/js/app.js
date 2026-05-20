@@ -15,34 +15,35 @@ let state = {
   markerVisible: false,
   cardExpanded: false,
   accordionOpen: false,
+  hudHidden: false, // Controlar si la interfaz está despejada
   voices: []
 };
 
 // Datos adicionales de interés académico para el acordeón (dinámicos)
 const academicDetails = {
   ingreso: [
-    "Fundación: 2011 por el Instituto de los Hermanos de las Escuelas Cristianas.",
-    "Acreditación: Licenciada por SUNEDU, garantizando calidad académica internacional.",
-    "Filosofía: Educación centrada en la persona, valores éticos y compromiso social.",
-    "Red Mundial: Conexión internacional con más de 80 universidades de la red La Salle."
+    "Lema Institucional: 'Saber para servir', que guía el crecimiento ético y científico.",
+    "Licenciamiento: Otorgado por SUNEDU en 2018 (Resolución de Consejo Directivo N° 101-2018-SUNEDU/CD).",
+    "Dirección Académica: Conducida por el Rector, el destacado economista Dr. Patricio Quintanilla Paulet.",
+    "Valores Lasallistas: Identidad cimentada en la Fe, Fraternidad y Servicio.",
+    "Oferta Académica: 8 escuelas profesionales licenciadas de alta demanda global."
   ],
   biblioteca: [
-    "Recursos: Más de 15,000 libros físicos especializados y revistas científicas.",
-    "Biblioteca Digital: Acceso gratuito a Scopus, ScienceDirect, IEEE Xplore y ProQuest.",
-    "Salas de Estudio: 6 salas grupales con pantallas de proyección y pizarras interactivas.",
-    "Horarios: Lunes a Viernes de 8:00 AM a 8:30 PM, Sábados de 9:00 AM a 1:00 PM."
+    "Catálogo: Colección física de libros especializados para investigación académica.",
+    "Biblioteca Virtual: Acceso directo a bases científicas internacionales como Scopus y ScienceDirect.",
+    "Repositorio Institucional: Acceso libre a tesis, artículos e investigaciones de la universidad.",
+    "Servicios: Salas grupales de estudio e investigación con pizarras multimedia integradas."
   ],
   laboratorio: [
-    "Infraestructura: PCs Intel Core i7, 32GB RAM, tarjetas gráficas dedicadas para IA.",
-    "Software: MATLAB, Python (Anaconda), Android Studio, Docker, Unity y herramientas CAD.",
-    "Proyectos: Desarrollo de tesis en Inteligencia Artificial, Robótica y Ciberseguridad.",
-    "Capacidad: 30 estudiantes por laboratorio con monitoreo docente interactivo."
+    "Enfoque de Carrera: Laboratorios orientados a las prácticas de la Escuela Profesional de Ingeniería de Software.",
+    "Líneas de Desarrollo: Diseño de patrones, arquitectura de sistemas, DevOps, bases de datos y cloud computing.",
+    "Tecnología y Proyectos: Desarrollo de aplicaciones móviles, sistemas distribuidos e Inteligencia Artificial.",
+    "Metodología Práctica: Desarrollo bajo metodologías ágiles (Scrum, Kanban) simulando equipos reales de la industria."
   ],
   auditorio: [
-    "Capacidad: Aforo cómodo para 220 asistentes sentados.",
-    "Tecnología: Ecualización acústica digital, proyector láser 4K y microfonía profesional.",
-    "Eventos: Congresos internacionales, ponencias académicas, obras de teatro y graduaciones.",
-    "Uso Común: Espacio compartido para asambleas de estudiantes y debates universitarios."
+    "Epicentro Académico: Sede de congresos internacionales, simposios científicos y ponencias de expertos.",
+    "Ceremonia de Graduación: Espacio solemne donde los egresados reciben sus títulos y grados académicos.",
+    "Actividades Culturales: Escenario para el desarrollo artístico, teatro, asambleas y debates del campus."
   ]
 };
 
@@ -56,6 +57,7 @@ const DOM = {
   arMarker: document.getElementById('ar-marker'),
   hudContainer: document.getElementById('hud-container'),
   scanFeedback: document.getElementById('scan-feedback'),
+  btnToggleHud: document.getElementById('btn-toggle-hud'),
   
   // HUD Cabecera
   locTitle: document.getElementById('loc-title'),
@@ -172,6 +174,11 @@ function setupLocation(locId) {
   } else {
     setupTTS(loc.audioScript);
   }
+
+  // Si la interfaz estaba oculta, la revelamos automáticamente al cambiar de parada
+  if (state.hudHidden) {
+    toggleHudVisibility();
+  }
 }
 
 // Configurar Síntesis de voz (Text-to-Speech)
@@ -221,6 +228,7 @@ function setupEvents() {
   // Controles de audio
   DOM.btnAudioPlay.addEventListener('click', toggleAudio);
   DOM.btnAudioReplay.addEventListener('click', restartAudio);
+  DOM.btnToggleHud.addEventListener('click', toggleHudVisibility);
 
   // Acordeón de detalles
   DOM.accordionToggle.addEventListener('click', toggleAccordion);
@@ -271,14 +279,9 @@ function playNarration() {
       onAudioFinished();
     });
   } else if (state.audioSource === 'tts' && state.speechUtterance) {
-    // Si ya está pausada, reanudar
-    if (speechSynthesis.paused) {
-      speechSynthesis.resume();
-    } else {
-      // Si no, cancelar en curso e iniciar
-      speechSynthesis.cancel();
-      speechSynthesis.speak(state.speechUtterance);
-    }
+    // Para TTS móvil, cancelamos siempre antes de reproducir para asegurar que no esté congelada
+    speechSynthesis.cancel();
+    speechSynthesis.speak(state.speechUtterance);
     startProgressTimer();
   }
 }
@@ -293,7 +296,11 @@ function pauseNarration() {
   if (state.audioSource === 'mp3' && state.audioElement) {
     state.audioElement.pause();
   } else if (state.audioSource === 'tts') {
-    speechSynthesis.pause();
+    // Para TTS en móviles, pause/resume causa cuelgues del motor de voz del sistema.
+    // La alternativa robusta es cancelar y resetear el progreso, iniciando de cero.
+    speechSynthesis.cancel();
+    state.audioProgress = 0;
+    DOM.audioProgressBar.style.width = '0%';
     clearInterval(state.progressInterval);
   }
 }
@@ -476,6 +483,20 @@ function populateMenuModal() {
 
     DOM.modalLocationsList.appendChild(item);
   });
+}
+
+// Controlar la visibilidad de la interfaz de usuario (despejar pantalla)
+function toggleHudVisibility() {
+  state.hudHidden = !state.hudHidden;
+  if (state.hudHidden) {
+    DOM.hudContainer.classList.add('hud-hidden');
+    DOM.btnToggleHud.innerHTML = '<i class="fa-solid fa-eye"></i>';
+    DOM.btnToggleHud.setAttribute('title', 'Mostrar Interfaz');
+  } else {
+    DOM.hudContainer.classList.remove('hud-hidden');
+    DOM.btnToggleHud.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+    DOM.btnToggleHud.setAttribute('title', 'Ocultar Interfaz');
+  }
 }
 
 // Ejecutar cuando se carga el DOM

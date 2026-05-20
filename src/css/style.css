@@ -214,8 +214,82 @@ html, body {
 .audio-hud-card,
 .hud-bottom-card,
 .floating-actions,
-.modal-overlay {
+.modal-overlay,
+.hud-toggle-btn {
   pointer-events: auto;
+}
+
+/* Botón flotante para ocultar/mostrar la interfaz */
+.hud-toggle-btn {
+  position: absolute;
+  top: env(safe-area-inset-top, 16px);
+  right: 16px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 1100;
+  transition: var(--transition-smooth);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-premium);
+}
+
+.hud-toggle-btn:hover {
+  transform: scale(1.08);
+  background: rgba(25, 118, 210, 0.4);
+  border-color: var(--color-secondary);
+  color: var(--color-accent);
+}
+
+.hud-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Transiciones para suavizar la ocultación del HUD */
+.hud-header,
+.audio-hud-card,
+.hud-bottom-card,
+.floating-actions,
+.scan-status {
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Estado oculto del HUD (despejado) */
+.hud-overlay.hud-hidden .hud-header {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-30px);
+}
+
+.hud-overlay.hud-hidden .audio-hud-card {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-30px);
+}
+
+.hud-overlay.hud-hidden .hud-bottom-card {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(120px);
+}
+
+.hud-overlay.hud-hidden .floating-actions {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(60px);
+}
+
+.hud-overlay.hud-hidden .scan-status {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* Estado de Escaneo */

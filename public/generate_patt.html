@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Patrón AR.js (.patt) - ULASALLE AR</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- MarkerCreator UMD Bundle -->
+  <script src="https://raw.githack.com/AR-js-org/Marker-Creator/main/dist/marker-creator.umd.js"></script>
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 600px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      margin-bottom: 20px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #FFD54F;
+      font-weight: 700;
+    }
+    .status {
+      font-size: 18px;
+      margin: 20px 0;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+    .visual-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    canvas {
+      border: 4px solid #38bdf8;
+      border-radius: 8px;
+      max-width: 250px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .btn {
+      background: #FFD54F;
+      color: #0f172a;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 14px rgba(255, 213, 79, 0.4);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 213, 79, 0.6);
+    }
+    .btn.secondary {
+      background: #38bdf8;
+      color: #0f172a;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4);
+    }
+    .btn.secondary:hover {
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.6);
+    }
+    .instruction {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-top: 20px;
+      line-height: 1.6;
+      text-align: left;
+    }
+    .alert-box {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      text-align: left;
+      font-size: 14px;
+    }
+    .alert-title {
+      color: #ef4444;
+      font-weight: 700;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    code {
+      background: #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #f472b6;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Generador de Patrón AR (.patt)</h1>
+    <p>Hemos cargado tu carta y creado el marcador con el borde de contraste requerido por AR.js.</p>
+    
+    <div class="visual-container">
+      <div id="status" class="status">Cargando imagen...</div>
+      <!-- Aquí se dibuja el marcador completo (Carta + Borde Negro) -->
+      <canvas id="marker-canvas" width="512" height="512" style="display:none;"></canvas>
+    </div>
+
+    <div class="btn-group">
+      <button id="download-patt" class="btn" style="display:none;">DESCARGAR ARCHIVO .PATT</button>
+      <button id="download-img" class="btn secondary" style="display:none;">DESCARGAR MARCADOR IMPRIMIBLE</button>
+    </div>
+    
+    <div class="alert-box">
+      <div class="alert-title">⚠️ ¡IMPORTANTE PARA LA SUSTENTACIÓN!</div>
+      Para que la cámara reconozca tu marcador, **debes apuntar a la imagen que tiene el borde negro grueso** (el canvas celeste arriba). Si apuntas a la carta del 7 de tréboles sola (sin el borde negro), AR.js no podrá detectarla porque necesita el borde para orientarse y calcular la perspectiva 3D.
+    </div>
+
+    <div class="instruction">
+      <strong>Instrucciones:</strong>
+      <ol>
+        <li>Haz clic en <strong>Descargar Archivo .patt</strong> y guárdalo en tu proyecto como <code>public/markers/carta_siete_trebol.patt</code>.</li>
+        <li>Haz clic en <strong>Descargar Marcador Imprimible</strong> para guardar la imagen con el borde negro.</li>
+        <li>Cuando inicies el tour en tu celular, apunta a esa imagen descargada (o imprímela) para ver aparecer tus espectaculares modelos 3D (`.glb`).</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const statusDiv = document.getElementById('status');
+    const canvas = document.getElementById('marker-canvas');
+    const downloadPattBtn = document.getElementById('download-patt');
+    const downloadImgBtn = document.getElementById('download-img');
+    const ctx = canvas.getContext('2d');
+    let pattContent = '';
+
+    // Cargar la imagen del 7 de tréboles
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = '/assets/img/carta_siete_trebol.jpg';
+    
+    img.onload = function() {
+      statusDiv.textContent = 'Procesando patrón y dibujando marcador...';
+
+      // 1. Dibujar el marcador oficial de AR.js en el canvas
+      // Un marcador patrón clásico tiene una relación de aspecto cuadrada.
+      // El fondo debe ser negro puro, y el patrón centrado adentro ocupando el 50% (patternRatio = 0.5)
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Dibujar la carta en el centro con ratio 0.50 (deja 25% de margen a cada lado)
+      const innerSize = canvas.width * 0.5;
+      const offset = (canvas.width - innerSize) / 2;
+      
+      // Dibujar la carta escalada al centro
+      ctx.drawImage(img, offset, offset, innerSize, innerSize);
+      
+      // Mostrar el canvas
+      canvas.style.display = 'block';
+
+      // 2. Generar el string de patrón .patt de AR.js usando el canvas de la carta interna
+      // La codificación .patt se hace sobre la imagen interna (sin el borde exterior)
+      const innerCanvas = document.createElement('canvas');
+      innerCanvas.width = img.width;
+      innerCanvas.height = img.height;
+      const innerCtx = innerCanvas.getContext('2d');
+      innerCtx.drawImage(img, 0, 0);
+      const dataUrl = innerCanvas.toDataURL('image/jpeg');
+
+      try {
+        const MarkerCreator = window.MarkerCreator;
+        if (!MarkerCreator || !MarkerCreator.ArPatternFile) {
+          statusDiv.textContent = 'Error: No se cargó la librería de patrones. Recarga la página.';
+          statusDiv.style.color = '#ef4444';
+          return;
+        }
+
+        MarkerCreator.ArPatternFile.encodeImageURL(dataUrl, function(patternString) {
+          pattContent = patternString;
+          statusDiv.textContent = '¡Marcador y patrón listos para usar!';
+          statusDiv.style.color = '#4ade80';
+          downloadPattBtn.style.display = 'inline-block';
+          downloadImgBtn.style.display = 'inline-block';
+          
+          // Descarga automática por comodidad
+          triggerPattDownload();
+        });
+      } catch (error) {
+        statusDiv.textContent = 'Error al codificar: ' + error.message;
+        statusDiv.style.color = '#ef4444';
+        console.error(error);
+      }
+    };
+
+    img.onerror = function() {
+      statusDiv.textContent = 'Error: No se pudo cargar "/assets/img/carta_siete_trebol.jpg".';
+      statusDiv.style.color = '#ef4444';
+    };
+
+    function triggerPattDownload() {
+      if (!pattContent) return;
+      const blob = new Blob([pattContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'carta_siete_trebol.patt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function triggerImgDownload() {
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'carta_siete_trebol_marker.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    downloadPattBtn.addEventListener('click', triggerPattDownload);
+    downloadImgBtn.addEventListener('click', triggerImgDownload);
+  </script>
+</body>
+</html>
