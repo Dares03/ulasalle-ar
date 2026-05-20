@@ -117,7 +117,7 @@ function init() {
 // ----------------------------------------------------
 // CONFIGURACIÓN DE LA LOCACIÓN SELECCIONADA
 // ----------------------------------------------------
-async function setupLocation(locId) {
+function setupLocation(locId) {
   state.currentLocationId = locId;
   const loc = locations[locId];
   if (!loc) return;
@@ -160,23 +160,16 @@ async function setupLocation(locId) {
     }
   });
 
-  // Pre-cargar/Verificar audio MP3 o configurar TTS
-  const mp3Url = `/audio/${locId}.mp3`;
-  try {
-    const response = await fetch(mp3Url, { method: 'HEAD' });
-    if (response.ok) {
-      state.audioSource = 'mp3';
-      if (state.audioElement) {
-        state.audioElement.pause();
-      }
-      state.audioElement = new Audio(mp3Url);
-      state.audioElement.addEventListener('ended', onAudioFinished);
-      state.audioElement.addEventListener('timeupdate', updateAudioProgressFromElement);
-    } else {
-      setupTTS(loc.audioScript);
+  // Configurar origen de audio síncronamente (prioriza MP3 local si se define, sino TTS)
+  if (loc.audioMp3) {
+    state.audioSource = 'mp3';
+    if (state.audioElement) {
+      state.audioElement.pause();
     }
-  } catch (e) {
-    // Si da error CORS o de red local, ir directamente a TTS
+    state.audioElement = new Audio(loc.audioMp3);
+    state.audioElement.addEventListener('ended', onAudioFinished);
+    state.audioElement.addEventListener('timeupdate', updateAudioProgressFromElement);
+  } else {
     setupTTS(loc.audioScript);
   }
 }
@@ -186,7 +179,7 @@ function setupTTS(text) {
   state.audioSource = 'tts';
   state.audioElement = null;
   
-  // Estimar duración basada en velocidad promedio de habla (aprox 2.4 palabras por segundo)
+  // Estimar duración basada en velocidad promedio de habla (aprox 2.3 palabras por segundo)
   const wordCount = text.split(/\s+/).length;
   state.estimatedDuration = Math.max(12, Math.round(wordCount / 2.3)); // Mínimo 12s
 
@@ -205,13 +198,16 @@ function setupTTS(text) {
     state.speechUtterance.voice = spanishVoice;
   }
   
-  state.speechUtterance.rate = 1.0; // Velocidad normal
-  state.speechUtterance.pitch = 1.05; // Tono ligeramente amigable/futurista
+  state.speechUtterance.rate = 0.95; // Habla ligeramente más pausada y natural
+  state.speechUtterance.pitch = 1.0; 
 
   state.speechUtterance.onend = onAudioFinished;
   state.speechUtterance.onerror = (e) => {
-    console.error("Error en TTS:", e);
-    onAudioFinished();
+    console.error("Evento o error en TTS:", e);
+    // Solo finalizar progreso si no fue cancelado manualmente para cambio de parada
+    if (state.audioPlaying) {
+      onAudioFinished();
+    }
   };
 }
 
@@ -249,25 +245,13 @@ function setupEvents() {
   DOM.arMarker.addEventListener('markerFound', () => {
     state.markerVisible = true;
     DOM.scanFeedback.classList.remove('active');
-    
-    // Reproducción inteligente al encontrar el marcador
-    if (!state.audioPlaying && state.audioProgress < 98) {
-      playNarration();
-    }
-    
-    console.log("Marker Found - Holograma activado y narración iniciada.");
+    console.log("Marker Found - Holograma activado.");
   });
 
   DOM.arMarker.addEventListener('markerLost', () => {
     state.markerVisible = false;
     DOM.scanFeedback.classList.add('active');
-    
-    // Pausa inteligente por pérdida de seguimiento del marcador
-    if (state.audioPlaying) {
-      pauseNarration();
-    }
-    
-    console.log("Marker Lost - Holograma oculto y narración pausada.");
+    console.log("Marker Lost - Holograma oculto.");
   });
 }
 
@@ -407,12 +391,15 @@ function startExperience() {
     speechSynthesis.speak(wakeUpUtterance);
   }
 
-  // Reproducir un sonido de chimb / bienvenida futurista
+  // Reproducir un sonido de chime / bienvenida futurista
   const welcomeChime = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
   welcomeChime.volume = 0.3;
   welcomeChime.play().catch(() => {});
 
   console.log("Experiencia de Tour AR iniciada.");
+
+  // Iniciar la narración inmediatamente de forma síncrona
+  playNarration();
 }
 
 function toggleAccordion() {
@@ -483,11 +470,8 @@ function populateMenuModal() {
       document.querySelectorAll('.location-item').forEach(el => el.classList.remove('active'));
       item.classList.add('active');
 
-      // Si la cámara no detecta el marcador pero el usuario navega manualmente, 
-      // le permitimos iniciar el audio pulsando Play (o play automático de cortesía)
-      setTimeout(() => {
-        playNarration();
-      }, 300);
+      // Reproducir de forma síncrona la narración de la nueva parada
+      playNarration();
     });
 
     DOM.modalLocationsList.appendChild(item);

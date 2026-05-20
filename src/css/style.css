@@ -31,15 +31,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
+html, body {
   font-family: var(--font-primary);
   background-color: var(--color-bg-dark);
   color: var(--color-text-primary);
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  height: 100vh;
-  width: 100vw;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
 }
 
 /* ----------------------------------------------------
@@ -852,16 +855,19 @@ body {
 /* Ajustes Responsivos de Pantalla Completa para AR.js */
 .a-canvas {
   position: absolute !important;
-  top: 0;
-  left: 0;
+  top: 0 !important;
+  left: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  z-index: 1 !important;
 }
 video {
   position: absolute !important;
-  top: 0;
-  left: 0;
+  top: 0 !important;
+  left: 0 !important;
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
+  z-index: 0 !important;
+  margin: 0 !important;
 }
